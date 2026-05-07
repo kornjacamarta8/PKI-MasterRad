@@ -51,4 +51,15 @@ public class PerformanceController : ControllerBase
             })
         });
     }
+
+    /// <summary>
+    /// Komparativna analiza - poređenje sa industrijskim PKI rešenjima
+    /// (Let's Encrypt, OpenSSL, EJBCA)
+    /// </summary>
+    [HttpGet("comparison")]
+    public IActionResult GetComparison()
+    {
+        var result = _perfService.CompareWithIndustryStandards();
+        return Ok(result);
+    }
 }

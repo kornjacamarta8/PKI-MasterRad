@@ -96,10 +96,11 @@ Pri svakom sledećem pokretanju, CA se učitava iz baze — ključevi se ne rege
 | GET | /api/Audit | Audit log |
 | GET | /api/Audit/filter?action= | Filtriranje audit loga |
 
-### Performanse
+### Performanse i analiza
 | Metoda | Ruta | Opis |
 |--------|------|------|
 | GET | /api/Performance/benchmark/keygen | RSA keygen benchmark |
+| GET | /api/Performance/comparison | Komparativna analiza sa industrijskim rešenjima |
 
 ---
 
