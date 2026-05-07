@@ -23,8 +23,14 @@ builder.Services.Configure<MongoDbSettings>(
 // Services
 builder.Services.AddSingleton<MongoDbService>();
 builder.Services.AddSingleton<CertificateAuthorityService>();
+builder.Services.AddSingleton<KeyEncryptionService>();
+builder.Services.AddSingleton<AuditService>();
 builder.Services.AddScoped<CertificateService>();
 builder.Services.AddScoped<RevocationService>();
+builder.Services.AddScoped<VerificationService>();
+builder.Services.AddScoped<VerificationService>();
+builder.Services.AddScoped<StatisticsService>();
+builder.Services.AddScoped<PerformanceService>();
 
 var app = builder.Build();
 

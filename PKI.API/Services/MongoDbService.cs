@@ -17,4 +17,10 @@ public class MongoDbService
 
     public IMongoCollection<CertificateRecord> Certificates =>
         _database.GetCollection<CertificateRecord>("certificates");
+
+    public IMongoCollection<CaKeyRecord> CaKeys =>
+    _database.GetCollection<CaKeyRecord>("ca_keys");
+
+    public IMongoCollection<AuditLogRecord> AuditLogs =>
+    _database.GetCollection<AuditLogRecord>("audit_logs");
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PKI.API.Services;
+using PKI.API.Models;
 
 namespace PKI.API.Controllers;
 
@@ -8,34 +9,58 @@ namespace PKI.API.Controllers;
 public class CertificateController : ControllerBase
 {
     private readonly CertificateService _certService;
+    private readonly AuditService _auditService;
 
-    public CertificateController(CertificateService certService)
+    public CertificateController(CertificateService certService, AuditService auditService)
     {
         _certService = certService;
+        _auditService = auditService;
     }
 
-    /// <summary>
-    /// Izdaje novi sertifikat za krajnji entitet
-    /// </summary>
     [HttpPost("issue")]
     public IActionResult IssueCertificate([FromBody] IssueCertificateRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.CommonName))
             return BadRequest("CommonName je obavezan.");
 
-        var record = _certService.IssueCertificate(
-            request.CommonName,
-            request.Organization ?? "Unknown",
-            request.Country ?? "RS",
-            request.ValidityDays > 0 ? request.ValidityDays : 365
-        );
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        try
+        {
+            var record = _certService.IssueCertificate(
+                request.CommonName,
+                request.Organization ?? "Unknown",
+                request.Country ?? "RS",
+                request.ValidityDays > 0 ? request.ValidityDays : 365);
 
-        return Ok(record);
+            _auditService.Log("IssueCertificate", true, ip,
+                record.SerialNumber, record.SubjectName,
+                $"Izdat sertifikat, validnost: {request.ValidityDays} dana");
+
+            return Ok(record);
+        }
+        catch (Exception ex)
+        {
+            _auditService.Log("IssueCertificate", false, ip,
+                details: request.CommonName, errorMessage: ex.Message);
+            return StatusCode(500, ex.Message);
+        }
     }
 
-    /// <summary>
-    /// Lista svih sertifikata u sistemu
-    /// </summary>
+    [HttpPost("issue-bulk")]
+    public IActionResult IssueBulk([FromBody] List<BulkCertificateRequest> requests)
+    {
+        if (requests == null || requests.Count == 0)
+            return BadRequest("Lista zahtjeva je prazna.");
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var results = _certService.IssueBulk(requests);
+
+        _auditService.Log("IssueCertificate", true, ip,
+            details: $"Bulk izdavanje: {results.Count} sertifikata");
+
+        return Ok(results);
+    }
+
     [HttpGet]
     public IActionResult GetAll()
     {
@@ -43,21 +68,15 @@ public class CertificateController : ControllerBase
         return Ok(certs);
     }
 
-    /// <summary>
-    /// Detalji sertifikata po serijskom broju
-    /// </summary>
     [HttpGet("{serialNumber}")]
     public IActionResult GetBySerial(string serialNumber)
     {
         var cert = _certService.GetBySerial(serialNumber);
         if (cert == null)
-            return NotFound($"Sertifikat sa serijskim brojem {serialNumber} nije pronadjen.");
+            return NotFound($"Sertifikat {serialNumber} nije pronadjen.");
         return Ok(cert);
     }
 
-    /// <summary>
-    /// Filtriranje sertifikata po statusu: Active, Revoked, Expired
-    /// </summary>
     [HttpGet("status/{status}")]
     public IActionResult GetByStatus(string status)
     {

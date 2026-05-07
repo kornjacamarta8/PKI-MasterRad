@@ -98,4 +98,32 @@ public class CertificateService
         writer.WriteObject(keyPair.Private);
         return sw.ToString();
     }
+
+    public List<CertificateRecord> IssueBulk(List<BulkCertificateRequest> requests)
+    {
+        var results = new List<CertificateRecord>();
+        foreach (var req in requests)
+        {
+            var record = IssueCertificate(
+                req.CommonName,
+                req.Organization ?? "Unknown",
+                req.Country ?? "RS",
+                req.ValidityDays > 0 ? req.ValidityDays : 365);
+            results.Add(record);
+        }
+        return results;
+    }
+
+    public List<string> GetExpiringCertificates(int withinDays = 30)
+    {
+        var threshold = DateTime.UtcNow.AddDays(withinDays);
+        return _mongo.Certificates
+            .Find(Builders<CertificateRecord>.Filter.And(
+                Builders<CertificateRecord>.Filter.Eq(c => c.Status, "Active"),
+                Builders<CertificateRecord>.Filter.Eq(c => c.CertificateType, "EndEntity"),
+                Builders<CertificateRecord>.Filter.Lt(c => c.ExpiresAt, threshold)))
+            .ToList()
+            .Select(c => c.SerialNumber)
+            .ToList();
+    }
 }
