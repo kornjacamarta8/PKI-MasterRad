@@ -9,12 +9,11 @@ digitalnim sertifikatima, razvijena kao praktični deo master rada.
 
 ## Arhitektura sistema
 
+```
 Root CA (4096-bit RSA, 20 godina)
-└── Intermediate CA (2048-bit RSA, 10 godina)
-└── EndEntity sertifikati (2048-bit RSA, konfigurabilan period)
-
-CA privatni ključevi se čuvaju enkriptovano u MongoDB koristeći AES-256.
-
+    └── Intermediate CA (2048-bit RSA, 10 godina)
+            └── EndEntity sertifikati (2048-bit RSA, konfigurabilan period)
+```
 ---
 
 ## Funkcionalnosti
@@ -45,7 +44,7 @@ CA privatni ključevi se čuvaju enkriptovano u MongoDB koristeći AES-256.
 ### Instalacija
 
 ```bash
-git clone https://github.com/TvojUsername/PKI-MasterRad.git
+git clone https://github.com/kornjacamarta8/PKI-MasterRad.git
 cd PKI-MasterRad/PKI.API
 dotnet restore
 dotnet run
@@ -115,37 +114,39 @@ Pri svakom sledećem pokretanju, CA se učitava iz baze — ključevi se ne rege
 
 ## Struktura projekta
 
+```
 PKI_MasterRad/
 └── PKI.API/
-├── Controllers/
-│   ├── AuditController.cs
-│   ├── CaController.cs
-│   ├── CertificateController.cs
-│   ├── PerformanceController.cs
-│   ├── RevocationController.cs
-│   ├── StatisticsController.cs
-│   └── VerificationController.cs
-├── Models/
-│   ├── AuditLogRecord.cs
-│   ├── BulkCertificateRequest.cs
-│   ├── CaKeyRecord.cs
-│   └── CertificateRecord.cs
-├── Services/
-│   ├── AuditService.cs
-│   ├── CertificateAuthorityService.cs
-│   ├── CertificateService.cs
-│   ├── KeyEncryptionService.cs
-│   ├── MongoDbService.cs
-│   ├── PerformanceService.cs
-│   ├── RevocationService.cs
-│   ├── StatisticsService.cs
-│   └── VerificationService.cs
-├── Settings/
-│   └── MongoDbSettings.cs
-└── Program.cs
+    ├── Controllers/
+    │   ├── AuditController.cs
+    │   ├── CaController.cs
+    │   ├── CertificateController.cs
+    │   ├── PerformanceController.cs
+    │   ├── RevocationController.cs
+    │   ├── StatisticsController.cs
+    │   └── VerificationController.cs
+    ├── Models/
+    │   ├── AuditLogRecord.cs
+    │   ├── BulkCertificateRequest.cs
+    │   ├── CaKeyRecord.cs
+    │   └── CertificateRecord.cs
+    ├── Services/
+    │   ├── AuditService.cs
+    │   ├── CertificateAuthorityService.cs
+    │   ├── CertificateService.cs
+    │   ├── KeyEncryptionService.cs
+    │   ├── MongoDbService.cs
+    │   ├── PerformanceService.cs
+    │   ├── RevocationService.cs
+    │   ├── StatisticsService.cs
+    │   └── VerificationService.cs
+    ├── Settings/
+    │   └── MongoDbSettings.cs
+    └── Program.cs
+```
 
 ---
 
 ## Autor
 
-Master rad — [Marta Kornjača], [Univerzitet Singidunum], 2026.
+Master rad - Marta Kornjača, Univerzitet Singidunum, 2026.
