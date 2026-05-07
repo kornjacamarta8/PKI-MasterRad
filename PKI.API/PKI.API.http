@@ -1,0 +1,6 @@
+@PKI.API_HostAddress = http://localhost:5266
+
+GET {{PKI.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
