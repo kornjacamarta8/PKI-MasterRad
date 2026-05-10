@@ -156,7 +156,7 @@ public class VerificationService
                 return true;
             }
 
-            // EndEntity — provjeri lanac do root-a
+            // EndEntity — proveri lanac do root-a
             if (_caService.IntermediateCertificate == null || _caService.RootCertificate == null)
             {
                 result.Errors.Add("CA sertifikati nisu dostupni za verifikaciju lanca.");

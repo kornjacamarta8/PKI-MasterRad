@@ -15,7 +15,7 @@ public class VerificationController : ControllerBase
     }
 
     /// <summary>
-    /// Verifikuje sertifikat po serijskom broju - provjerava lanac poverenja, 
+    /// Verifikuje sertifikat po serijskom broju - proverava lanac poverenja, 
     /// potpis, validnost i status opoziva
     /// </summary>
     [HttpGet("verify/{serialNumber}")]

@@ -50,7 +50,7 @@ public class CertificateController : ControllerBase
     public IActionResult IssueBulk([FromBody] List<BulkCertificateRequest> requests)
     {
         if (requests == null || requests.Count == 0)
-            return BadRequest("Lista zahtjeva je prazna.");
+            return BadRequest("Lista zahteva je prazna.");
 
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var results = _certService.IssueBulk(requests);
