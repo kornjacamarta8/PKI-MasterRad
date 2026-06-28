@@ -12,7 +12,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "PKI Management API",
         Version = "v1",
-        Description = "Mini PKI infrastruktura - upravljanje digitalnim sertifikatima"
+        Description = "PKI infrastruktura - upravljanje digitalnim sertifikatima"
     });
 });
 
