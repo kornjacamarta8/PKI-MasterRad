@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PKI MasterRad — Command Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e13;
+    --panel:#11161d;
+    --panel-alt:#161d26;
+    --border:#232b36;
+    --text:#dde6ef;
+    --muted:#7c8ba1;
+    --accent:#35e0c2;
+    --accent-dim:#1d7d6c;
+    --gold:#f2b84b;
+    --danger:#ef5d6f;
+    --danger-dim:#4a2530;
+    --ok:#6bcf7f;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Inter', system-ui, sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(53,224,194,0.07), transparent 60%),
+      radial-gradient(900px 500px at 10% 0%, rgba(242,184,75,0.05), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    padding-bottom:80px;
+  }
+  a{color:var(--accent);}
+  code, .mono{font-family:var(--mono);}
+  ::selection{background:var(--accent-dim); color:#fff;}
+
+  /* ---------- top bar ---------- */
+  header.topbar{
+    position:sticky; top:0; z-index:50;
+    background:rgba(10,14,19,0.92); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+    padding:14px 28px;
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+  }
+  .brand{display:flex; flex-direction:column; gap:2px; margin-right:auto;}
+  .brand .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--accent); text-transform:uppercase;}
+  .brand h1{font-size:17px; margin:0; font-weight:800; letter-spacing:-0.01em;}
+  nav.quicknav{display:flex; gap:2px; flex-wrap:wrap;}
+  nav.quicknav a{
+    font-family:var(--mono); font-size:12px; color:var(--muted); text-decoration:none;
+    padding:6px 10px; border-radius:6px; border:1px solid transparent;
+  }
+  nav.quicknav a:hover{color:var(--text); border-color:var(--border); background:var(--panel-alt);}
+  .conn{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px;}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--danger); box-shadow:0 0 8px var(--danger);}
+  .dot.ok{background:var(--ok); box-shadow:0 0 8px var(--ok);}
+  input.apibase{
+    background:var(--panel-alt); border:1px solid var(--border); color:var(--text);
+    font-family:var(--mono); font-size:12px; padding:7px 10px; border-radius:6px; width:220px;
+  }
+  button.btn{
+    font-family:var(--sans); font-weight:600; font-size:13px; cursor:pointer;
+    background:var(--accent); color:#04211c; border:none; border-radius:7px;
+    padding:9px 16px; transition:transform .1s ease, filter .15s ease;
+  }
+  button.btn:hover{filter:brightness(1.08);}
+  button.btn:active{transform:scale(.97);}
+  button.btn.ghost{background:transparent; color:var(--text); border:1px solid var(--border);}
+  button.btn.ghost:hover{border-color:var(--accent); color:var(--accent);}
+  button.btn.danger{background:var(--danger); color:#2a0b10;}
+  button.btn.gold{background:var(--gold); color:#2a1c02;}
+  button.btn.small{padding:5px 10px; font-size:12px; border-radius:6px;}
+  button.btn:disabled{opacity:.4; cursor:not-allowed;}
+
+  main{max-width:1180px; margin:0 auto; padding:0 28px;}
+
+  /* ---------- chain-of-trust signature element ---------- */
+  .chain-strip{
+    display:flex; align-items:center; gap:0; margin:34px 0 30px; overflow-x:auto; padding-bottom:6px;
+  }
+  .chain-node{
+    display:flex; flex-direction:column; gap:4px; padding:14px 20px; border:1px solid var(--border);
+    border-radius:var(--radius); background:var(--panel); min-width:170px;
+  }
+  .chain-node .lvl{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--muted); text-transform:uppercase;}
+  .chain-node .nm{font-family:var(--mono); font-size:13px; color:var(--accent); word-break:break-all;}
+  .chain-link{
+    flex:0 0 44px; height:1px; background:repeating-linear-gradient(90deg, var(--border) 0 6px, transparent 6px 12px); position:relative;
+  }
+  .chain-link::after{content:'›'; position:absolute; right:-3px; top:-11px; color:var(--muted); font-size:16px;}
+
+  /* ---------- sections ---------- */
+  section.block{margin-bottom:44px; scroll-margin-top:80px;}
+  .block-head{display:flex; align-items:baseline; gap:12px; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:10px;}
+  .block-head .idx{font-family:var(--mono); color:var(--accent); font-size:13px;}
+  .block-head h2{font-size:19px; margin:0; font-weight:700;}
+  .block-head .desc{font-size:12.5px; color:var(--muted); margin-left:auto; font-family:var(--mono);}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  @media(max-width:860px){ .grid2, .grid3, .grid4{grid-template-columns:1fr;} }
+
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px;}
+  .card h3{margin:0 0 10px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .badge{font-family:var(--mono); font-size:10px; padding:2px 7px; border-radius:20px; border:1px solid var(--border); color:var(--muted); text-transform:uppercase; letter-spacing:.06em;}
+  .badge.active{color:var(--ok); border-color:var(--ok);}
+  .badge.revoked{color:var(--danger); border-color:var(--danger);}
+  .badge.expired{color:var(--gold); border-color:var(--gold);}
+  .kv{display:grid; grid-template-columns:110px 1fr; gap:4px 10px; font-size:12.5px; margin-bottom:10px;}
+  .kv .k{color:var(--muted);}
+  .kv .v{font-family:var(--mono); word-break:break-all;}
+
+  textarea, select, input[type=text], input[type=number]{
+    width:100%; background:var(--panel-alt); border:1px solid var(--border); color:var(--text);
+    padding:9px 11px; border-radius:7px; font-family:var(--sans); font-size:13px;
+  }
+  textarea{font-family:var(--mono); font-size:12px; resize:vertical;}
+  label.field{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; margin-top:12px;}
+  label.field:first-child{margin-top:0;}
+
+  pre.pemblock{
+    background:#050708; border:1px solid var(--border); border-radius:8px; padding:12px;
+    font-family:var(--mono); font-size:11px; color:var(--accent); max-height:220px; overflow:auto; white-space:pre-wrap; word-break:break-all;
+  }
+
+  table.datatable{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.datatable th{
+    text-align:left; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--border);
+  }
+  table.datatable td{padding:9px 10px; border-bottom:1px solid #1a2029; vertical-align:top;}
+  table.datatable tr:hover td{background:var(--panel-alt);}
+  .serial{font-family:var(--mono); font-size:11.5px; color:var(--accent);}
+  .rowactions{display:flex; gap:6px; flex-wrap:wrap;}
+
+  .tabs{display:flex; gap:6px; margin-bottom:16px;}
+  .tab{padding:8px 14px; border-radius:7px; border:1px solid var(--border); background:var(--panel); font-size:12.5px; cursor:pointer; font-weight:600; color:var(--muted);}
+  .tab.on{color:var(--bg); background:var(--accent); border-color:var(--accent);}
+  .tabpanel{display:none;}
+  .tabpanel.on{display:block;}
+
+  .toast-wrap{position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px;}
+  .toast{
+    background:var(--panel); border:1px solid var(--border); border-left:4px solid var(--accent);
+    padding:12px 16px; border-radius:8px; font-size:12.5px; max-width:340px; box-shadow:0 8px 24px rgba(0,0,0,.4);
+    animation:slidein .2s ease;
+  }
+  .toast.err{border-left-color:var(--danger);}
+  @keyframes slidein{from{transform:translateY(8px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+
+  .bulkrow{display:grid; grid-template-columns:1.4fr 1.2fr 0.6fr 0.7fr 32px; gap:8px; margin-bottom:8px; align-items:center;}
+  .bulkrow input{font-size:12px; padding:7px 9px;}
+  .removeRow{background:none; border:1px solid var(--border); color:var(--danger); border-radius:6px; cursor:pointer; height:32px;}
+
+  .statgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;}
+  @media(max-width:860px){.statgrid{grid-template-columns:repeat(2,1fr);}}
+  .stat{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px;}
+  .stat .num{font-family:var(--mono); font-size:26px; font-weight:700; color:var(--accent);}
+  .stat .lbl{font-size:11.5px; color:var(--muted); margin-top:4px;}
+
+  .barrow{display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:11.5px;}
+  .barrow .lbl{width:64px; font-family:var(--mono); color:var(--muted);}
+  .barrow .track{flex:1; background:var(--panel-alt); border-radius:4px; height:10px; overflow:hidden;}
+  .barrow .fill{height:100%; background:var(--accent);}
+  .barrow .cnt{width:28px; text-align:right; font-family:var(--mono); color:var(--text);}
+
+  .errlist{color:var(--danger); font-size:12px; margin:8px 0 0; padding-left:18px;}
+  .chainpath{font-family:var(--mono); font-size:12px; color:var(--accent); margin:8px 0 0; padding-left:0; list-style:none;}
+  .chainpath li{padding:3px 0 3px 16px; border-left:2px solid var(--border); margin-left:4px;}
+  .chainpath li:last-child{border-left:2px solid var(--accent);}
+
+  footer.foot{text-align:center; color:var(--muted); font-size:11.5px; font-family:var(--mono); margin-top:60px; padding:20px;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="eyebrow">PKI MasterRad</span>
+    <h1>Command Console</h1>
+  </div>
+  <nav class="quicknav">
+    <a href="#ca">CA</a>
+    <a href="#issue">Izdavanje</a>
+    <a href="#registry">Registar</a>
+    <a href="#revoke">Opoziv/CRL</a>
+    <a href="#verify">Verifikacija</a>
+    <a href="#stats">Statistika</a>
+    <a href="#perf">Performanse</a>
+    <a href="#audit">Audit</a>
+  </nav>
+  <div class="conn">
+    <span class="dot" id="connDot"></span>
+    <span id="connLabel">nepovezano</span>
+  </div>
+  <input class="apibase" id="apiBase" type="text" value="http://localhost:5266" title="Bazni URL PKI.API projekta">
+  <button class="btn ghost small" id="btnConnect">Poveži se</button>
+</header>
+
+<main>
+
+  <!-- signature chain-of-trust visual -->
+  <div class="chain-strip" id="chainStrip">
+    <div class="chain-node"><span class="lvl">Root CA</span><span class="nm">—</span></div>
+    <div class="chain-link"></div>
+    <div class="chain-node"><span class="lvl">Intermediate CA</span><span class="nm">—</span></div>
+    <div class="chain-link"></div>
+    <div class="chain-node"><span class="lvl">End Entity</span><span class="nm">izdaje se po zahtevu</span></div>
+  </div>
+
+  <!-- 1. CA -->
+  <section class="block" id="ca">
+    <div class="block-head"><span class="idx">01</span><h2>CA Hijerarhija</h2><span class="desc">GET /api/Ca/root · /api/Ca/intermediate</span></div>
+    <div class="grid2">
+      <div class="card" id="rootCard">
+        <h3>Root CA <span class="badge">nije učitano</span></h3>
+        <div class="kv" id="rootKv"></div>
+        <button class="btn ghost small" onclick="togglePem('rootPem')">Prikaži/sakrij PEM</button>
+        <pre class="pemblock" id="rootPem" style="display:none;"></pre>
+      </div>
+      <div class="card" id="interCard">
+        <h3>Intermediate CA <span class="badge">nije učitano</span></h3>
+        <div class="kv" id="interKv"></div>
+        <button class="btn ghost small" onclick="togglePem('interPem')">Prikaži/sakrij PEM</button>
+        <pre class="pemblock" id="interPem" style="display:none;"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Issue -->
+  <section class="block" id="issue">
+    <div class="block-head"><span class="idx">02</span><h2>Izdavanje sertifikata</h2><span class="desc">POST /api/Certificate/issue(-bulk)</span></div>
+    <div class="tabs">
+      <div class="tab on" data-tab="single">Pojedinačno</div>
+      <div class="tab" data-tab="bulk">Grupno (bulk)</div>
+    </div>
+
+    <div class="tabpanel on" id="tab-single">
+      <div class="card">
+        <label class="field">Common Name (CN)</label>
+        <input type="text" id="issCn" placeholder="npr. marta.web.rs">
+        <div class="grid3">
+          <div><label class="field">Organizacija</label><input type="text" id="issOrg" placeholder="Unknown"></div>
+          <div><label class="field">Država (2 slova)</label><input type="text" id="issCountry" placeholder="RS" maxlength="2"></div>
+          <div><label class="field">Validnost (dana)</label><input type="number" id="issDays" value="365"></div>
+        </div>
+        <div style="margin-top:14px;"><button class="btn" onclick="issueSingle()">Izdaj sertifikat</button></div>
+        <pre class="pemblock" id="issSingleResult" style="display:none; margin-top:14px;"></pre>
+      </div>
+    </div>
+
+    <div class="tabpanel" id="tab-bulk">
+      <div class="card">
+        <div id="bulkRows"></div>
+        <button class="btn ghost small" onclick="addBulkRow()">+ Dodaj red</button>
+        <div style="margin-top:14px;"><button class="btn" onclick="issueBulk()">Izdaj sve (bulk)</button></div>
+        <pre class="pemblock" id="issBulkResult" style="display:none; margin-top:14px;"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Registry -->
+  <section class="block" id="registry">
+    <div class="block-head"><span class="idx">03</span><h2>Registar sertifikata</h2><span class="desc">GET /api/Certificate[/status/{s}][/{serial}]</span></div>
+    <div class="card">
+      <div class="grid3" style="align-items:end;">
+        <div>
+          <label class="field">Filter po statusu</label>
+          <select id="regStatusFilter">
+            <option value="">Svi</option>
+            <option value="Active">Active</option>
+            <option value="Revoked">Revoked</option>
+            <option value="Expired">Expired</option>
+          </select>
+        </div>
+        <div>
+          <label class="field">Pretraga po serijskom broju</label>
+          <input type="text" id="regSerialSearch" placeholder="npr. 4F2A9B...">
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="loadRegistry()">Osveži listu</button>
+          <button class="btn ghost" onclick="searchBySerial()">Traži</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto; margin-top:16px;">
+        <table class="datatable">
+          <thead><tr><th>Serijski</th><th>Subject</th><th>Tip</th><th>Status</th><th>Izdat</th><th>Ističe</th><th>Akcije</th></tr></thead>
+          <tbody id="regTbody"><tr><td colspan="7" style="color:var(--muted);">Poveži se i klikni "Osveži listu".</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card" id="detailCard" style="display:none; margin-top:16px;">
+        <h3>Detalji sertifikata <span class="badge" id="detailBadge"></span></h3>
+        <div class="kv" id="detailKv"></div>
+        <button class="btn ghost small" onclick="copyText(document.getElementById('detailPem').textContent)">Kopiraj PEM</button>
+        <pre class="pemblock" id="detailPem"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Revoke & CRL -->
+  <section class="block" id="revoke">
+    <div class="block-head"><span class="idx">04</span><h2>Opoziv & CRL</h2><span class="desc">POST /api/Revocation/revoke/{serial} · GET /api/Revocation/crl</span></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Opozovi sertifikat</h3>
+        <label class="field">Sertifikat (aktivni)</label>
+        <select id="revSerialSelect"><option value="">— osveži listu registra prvo —</option></select>
+        <label class="field">Razlog opoziva</label>
+        <select id="revReason">
+          <option value="Unspecified">Unspecified</option>
+          <option value="KeyCompromise">KeyCompromise</option>
+          <option value="CACompromise">CACompromise</option>
+          <option value="AffiliationChanged">AffiliationChanged</option>
+          <option value="Superseded">Superseded</option>
+          <option value="CessationOfOperation">CessationOfOperation</option>
+        </select>
+        <div style="margin-top:14px;"><button class="btn danger" onclick="revokeCert()">Opozovi sertifikat</button></div>
+      </div>
+      <div class="card">
+        <h3>Certificate Revocation List</h3>
+        <div class="kv" id="crlMeta"></div>
+        <button class="btn gold small" onclick="generateCrl()">Generiši CRL</button>
+        <button class="btn ghost small" onclick="copyText(document.getElementById('crlPem').textContent)">Kopiraj</button>
+        <pre class="pemblock" id="crlPem" style="margin-top:12px;"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Verify -->
+  <section class="block" id="verify">
+    <div class="block-head"><span class="idx">05</span><h2>Verifikacija & status</h2><span class="desc">GET /api/Verification/verify|status/{serial} · POST /verify-pem</span></div>
+    <div class="grid3">
+      <div class="card">
+        <h3>Verifikuj po serijskom broju</h3>
+        <input type="text" id="verSerialInput" placeholder="serijski broj">
+        <div style="margin-top:10px;"><button class="btn" onclick="verifyBySerial()">Verifikuj</button></div>
+      </div>
+      <div class="card">
+        <h3>Verifikuj po PEM sadržaju</h3>
+        <textarea id="verPemInput" rows="5" placeholder="-----BEGIN CERTIFICATE-----"></textarea>
+        <div style="margin-top:10px;"><button class="btn" onclick="verifyByPem()">Verifikuj PEM</button></div>
+      </div>
+      <div class="card">
+        <h3>Brza status provera (OCSP-like)</h3>
+        <input type="text" id="statSerialInput" placeholder="serijski broj">
+        <div style="margin-top:10px;"><button class="btn ghost" onclick="checkStatus()">Proveri status</button></div>
+        <div class="kv" id="statResult" style="margin-top:10px;"></div>
+      </div>
+    </div>
+    <div class="card" id="verifyResultCard" style="display:none; margin-top:16px;">
+      <h3>Rezultat verifikacije <span class="badge" id="verifyBadge"></span></h3>
+      <div class="kv" id="verifyKv"></div>
+      <div id="verifyChainWrap"></div>
+      <ul class="errlist" id="verifyErrors"></ul>
+    </div>
+  </section>
+
+  <!-- 6. Statistics -->
+  <section class="block" id="stats">
+    <div class="block-head"><span class="idx">06</span><h2>Statistika sistema</h2><span class="desc">GET /api/Statistics · /api/Statistics/expiring</span></div>
+    <button class="btn ghost small" onclick="loadStats()">Osveži statistiku</button>
+    <div class="statgrid" style="margin-top:14px;" id="statCards"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Razlozi opoziva</h3>
+        <div id="revReasonBars" style="color:var(--muted); font-size:12px;">—</div>
+      </div>
+      <div class="card">
+        <h3>Sertifikati koji ističu</h3>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <input type="number" id="expiringDays" value="30" style="width:100px;">
+          <button class="btn ghost small" onclick="loadExpiring()">Proveri</button>
+        </div>
+        <div id="expiringResult" style="font-family:var(--mono); font-size:12px; color:var(--gold);"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Izdati sertifikati po mesecu (poslednjih 12)</h3>
+      <div id="monthlyBars"></div>
+    </div>
+  </section>
+
+  <!-- 7. Performance -->
+  <section class="block" id="perf">
+    <div class="block-head"><span class="idx">07</span><h2>Performanse & poređenje</h2><span class="desc">GET /api/Performance/benchmark/keygen · /comparison</span></div>
+    <div class="card">
+      <h3>RSA Key Generation Benchmark</h3>
+      <div style="display:flex; gap:8px; align-items:end;">
+        <div><label class="field">Iteracije (1–10)</label><input type="number" id="benchIter" value="3" min="1" max="10" style="width:120px;"></div>
+        <button class="btn" onclick="runBenchmark()">Pokreni benchmark</button>
+      </div>
+      <div style="overflow-x:auto; margin-top:14px;">
+        <table class="datatable">
+          <thead><tr><th>Veličina ključa</th><th>Prosek (ms)</th><th>Min</th><th>Max</th><th>Nivo sigurnosti</th></tr></thead>
+          <tbody id="benchTbody"><tr><td colspan="5" style="color:var(--muted);">Nema rezultata.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Komparativna analiza (industrijski standardi)</h3>
+      <button class="btn ghost small" onclick="loadComparison()">Učitaj poređenje</button>
+      <div style="overflow-x:auto; margin-top:14px;">
+        <table class="datatable" id="compTable"><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Audit -->
+  <section class="block" id="audit">
+    <div class="block-head"><span class="idx">08</span><h2>Audit log</h2><span class="desc">GET /api/Audit · /api/Audit/filter</span></div>
+    <div class="card">
+      <div class="grid3" style="align-items:end;">
+        <div><label class="field">Broj zapisa (limit)</label><input type="number" id="auditLimit" value="50"></div>
+        <div>
+          <label class="field">Filter po akciji</label>
+          <select id="auditAction">
+            <option value="">— bez filtera —</option>
+            <option value="InitializeCA">InitializeCA</option>
+            <option value="IssueCertificate">IssueCertificate</option>
+            <option value="RevokeCertificate">RevokeCertificate</option>
+            <option value="GenerateCRL">GenerateCRL</option>
+            <option value="PerformanceBenchmark">PerformanceBenchmark</option>
+          </select>
+        </div>
+        <div><label class="field">ili po serijskom broju</label><input type="text" id="auditSerial" placeholder="serijski broj"></div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button class="btn" onclick="loadAuditRecent()">Prikaži poslednje</button>
+        <button class="btn ghost" onclick="loadAuditFilter()">Primeni filter</button>
+      </div>
+      <div style="overflow-x:auto; margin-top:14px;">
+        <table class="datatable">
+          <thead><tr><th>Vreme</th><th>Akcija</th><th>Uspeh</th><th>Serijski</th><th>Detalji</th><th>IP</th></tr></thead>
+          <tbody id="auditTbody"><tr><td colspan="6" style="color:var(--muted);">Nema zapisa.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">PKI MasterRad · .NET / BouncyCastle / MongoDB · konzola generisana za lokalni razvoj</footer>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ================= CORE: API helper ================= */
+function getBase(){ return document.getElementById('apiBase').value.replace(/\/$/, ''); }
+
+async function api(method, path, body){
+  const url = getBase() + path;
+  const opts = { method, headers:{} };
+  if(body !== undefined){ opts.headers['Content-Type']='application/json'; opts.body = JSON.stringify(body); }
+  const res = await fetch(url, opts);
+  const text = await res.text();
+  let data = null;
+  try{ data = text ? JSON.parse(text) : null; }catch(e){ data = text; }
+  if(!res.ok){
+    const msg = (data && data.message) ? data.message : (typeof data === 'string' ? data : `HTTP ${res.status}`);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+function toast(msg, isErr){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 4500);
+}
+
+function copyText(t){
+  navigator.clipboard.writeText(t).then(()=>toast('Kopirano u clipboard.'));
+}
+
+function togglePem(id){
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function fmtDate(d){
+  if(!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleString('sr-RS');
+}
+
+function shortSerial(s){
+  if(!s) return '—';
+  return s.length > 18 ? s.slice(0,8)+'…'+s.slice(-6) : s;
+}
+
+/* ================= CONNECTION ================= */
+document.getElementById('btnConnect').addEventListener('click', connect);
+async function connect(){
+  try{
+    await api('GET', '/api/Ca/root');
+    document.getElementById('connDot').classList.add('ok');
+    document.getElementById('connLabel').textContent = 'povezano';
+    toast('Uspešno povezano na PKI API.');
+    loadCa();
+  }catch(e){
+    document.getElementById('connDot').classList.remove('ok');
+    document.getElementById('connLabel').textContent = 'greška';
+    toast('Ne mogu da se povežem: ' + e.message + ' (proveri CORS i da li API radi)', true);
+  }
+}
+
+/* ================= 1. CA ================= */
+async function loadCa(){
+  try{
+    const root = await api('GET', '/api/Ca/root');
+    fillCa('root', root);
+  }catch(e){ toast('Root CA: ' + e.message, true); }
+  try{
+    const inter = await api('GET', '/api/Ca/intermediate');
+    fillCa('inter', inter);
+  }catch(e){ toast('Intermediate CA: ' + e.message, true); }
+}
+function fillCa(prefix, data){
+  const card = document.getElementById(prefix+'Card');
+  card.querySelector('.badge').textContent = 'aktivan';
+  card.querySelector('.badge').classList.add('active');
+  document.getElementById(prefix+'Kv').innerHTML = `
+    <div class="k">Subject</div><div class="v">${data.subject}</div>
+    <div class="k">Issuer</div><div class="v">${data.issuer}</div>
+    <div class="k">Serijski</div><div class="v">${data.serialNumber}</div>
+    <div class="k">Važi od</div><div class="v">${fmtDate(data.validFrom)}</div>
+    <div class="k">Važi do</div><div class="v">${fmtDate(data.validTo)}</div>
+  `;
+  document.getElementById(prefix+'Pem').textContent = data.pemCertificate;
+
+  const strip = document.getElementById('chainStrip');
+  if(prefix === 'root') strip.children[0].querySelector('.nm').textContent = data.subject;
+  if(prefix === 'inter') strip.children[2].querySelector('.nm').textContent = data.subject;
+}
+
+/* ================= 2. ISSUE ================= */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.tabpanel').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    document.getElementById('tab-'+t.dataset.tab).classList.add('on');
+  });
+});
+
+async function issueSingle(){
+  const cn = document.getElementById('issCn').value.trim();
+  if(!cn){ toast('CommonName je obavezan.', true); return; }
+  const body = {
+    commonName: cn,
+    organization: document.getElementById('issOrg').value.trim() || undefined,
+    country: document.getElementById('issCountry').value.trim() || undefined,
+    validityDays: parseInt(document.getElementById('issDays').value) || 365
+  };
+  try{
+    const rec = await api('POST', '/api/Certificate/issue', body);
+    const box = document.getElementById('issSingleResult');
+    box.style.display = 'block';
+    box.textContent = JSON.stringify(rec, null, 2);
+    toast('Sertifikat izdat: ' + shortSerial(rec.serialNumber));
+    loadRegistry();
+  }catch(e){ toast('Greška pri izdavanju: ' + e.message, true); }
+}
+
+let bulkRowCount = 0;
+function addBulkRow(){
+  bulkRowCount++;
+  const id = bulkRowCount;
+  const row = document.createElement('div');
+  row.className = 'bulkrow';
+  row.id = 'bulkrow-'+id;
+  row.innerHTML = `
+    <input type="text" placeholder="Common Name" data-f="cn">
+    <input type="text" placeholder="Organizacija" data-f="org">
+    <input type="text" placeholder="RS" maxlength="2" data-f="country">
+    <input type="number" placeholder="365" data-f="days" value="365">
+    <button class="removeRow" onclick="document.getElementById('bulkrow-${id}').remove()">✕</button>
+  `;
+  document.getElementById('bulkRows').appendChild(row);
+}
+addBulkRow(); addBulkRow();
+
+async function issueBulk(){
+  const rows = document.querySelectorAll('#bulkRows .bulkrow');
+  const list = [];
+  rows.forEach(r=>{
+    const cn = r.querySelector('[data-f=cn]').value.trim();
+    if(!cn) return;
+    list.push({
+      commonName: cn,
+      organization: r.querySelector('[data-f=org]').value.trim() || undefined,
+      country: r.querySelector('[data-f=country]').value.trim() || undefined,
+      validityDays: parseInt(r.querySelector('[data-f=days]').value) || 365
+    });
+  });
+  if(list.length === 0){ toast('Unesi bar jedan Common Name.', true); return; }
+  try{
+    const res = await api('POST', '/api/Certificate/issue-bulk', list);
+    const box = document.getElementById('issBulkResult');
+    box.style.display = 'block';
+    box.textContent = JSON.stringify(res, null, 2);
+    toast(`Izdato ${res.length} sertifikata (bulk).`);
+    loadRegistry();
+  }catch(e){ toast('Greška pri bulk izdavanju: ' + e.message, true); }
+}
+
+/* ================= 3. REGISTRY ================= */
+async function loadRegistry(){
+  const status = document.getElementById('regStatusFilter').value;
+  try{
+    const list = status ? await api('GET', `/api/Certificate/status/${status}`) : await api('GET', '/api/Certificate');
+    renderRegistry(list);
+    fillRevokeSelect(list);
+  }catch(e){ toast('Greška pri učitavanju registra: ' + e.message, true); }
+}
+
+function renderRegistry(list){
+  const tbody = document.getElementById('regTbody');
+  if(!list || list.length === 0){ tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);">Nema sertifikata.</td></tr>'; return; }
+  tbody.innerHTML = list.map(c => `
+    <tr>
+      <td class="serial">${shortSerial(c.serialNumber)}</td>
+      <td>${c.subjectName}</td>
+      <td>${c.certificateType}</td>
+      <td><span class="badge ${c.status==='Active'?'active':c.status==='Revoked'?'revoked':'expired'}">${c.status}</span></td>
+      <td>${fmtDate(c.issuedAt)}</td>
+      <td>${fmtDate(c.expiresAt)}</td>
+      <td class="rowactions">
+        <button class="btn ghost small" onclick="viewDetail('${c.serialNumber}')">Detalji</button>
+        <button class="btn ghost small" onclick="prefillVerify('${c.serialNumber}')">Verifikuj</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function searchBySerial(){
+  const s = document.getElementById('regSerialSearch').value.trim();
+  if(!s){ loadRegistry(); return; }
+  try{
+    const c = await api('GET', `/api/Certificate/${s}`);
+    renderRegistry([c]);
+  }catch(e){ toast('Nije pronađen: ' + e.message, true); }
+}
+
+async function viewDetail(serial){
+  try{
+    const c = await api('GET', `/api/Certificate/${serial}`);
+    const card = document.getElementById('detailCard');
+    card.style.display = 'block';
+    document.getElementById('detailBadge').textContent = c.status;
+    document.getElementById('detailBadge').className = 'badge ' + (c.status==='Active'?'active':c.status==='Revoked'?'revoked':'expired');
+    document.getElementById('detailKv').innerHTML = `
+      <div class="k">Serijski</div><div class="v">${c.serialNumber}</div>
+      <div class="k">Subject</div><div class="v">${c.subjectName}</div>
+      <div class="k">Issuer</div><div class="v">${c.issuerName}</div>
+      <div class="k">Tip</div><div class="v">${c.certificateType}</div>
+      <div class="k">Izdat</div><div class="v">${fmtDate(c.issuedAt)}</div>
+      <div class="k">Ističe</div><div class="v">${fmtDate(c.expiresAt)}</div>
+      <div class="k">Opozvan</div><div class="v">${c.revokedAt ? fmtDate(c.revokedAt) + ' — ' + c.revocationReason : '—'}</div>
+    `;
+    document.getElementById('detailPem').textContent = c.pemCertificate;
+    card.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }catch(e){ toast('Greška: ' + e.message, true); }
+}
+
+function prefillVerify(serial){
+  document.getElementById('verSerialInput').value = serial;
+  document.getElementById('verify').scrollIntoView({behavior:'smooth'});
+}
+
+/* ================= 4. REVOKE & CRL ================= */
+function fillRevokeSelect(list){
+  const sel = document.getElementById('revSerialSelect');
+  const active = (list || []).filter(c => c.status === 'Active');
+  sel.innerHTML = '<option value="">— izaberi sertifikat —</option>' +
+    active.map(c => `<option value="${c.serialNumber}">${shortSerial(c.serialNumber)} — ${c.subjectName}</option>`).join('');
+}
+
+async function revokeCert(){
+  const serial = document.getElementById('revSerialSelect').value;
+  const reason = document.getElementById('revReason').value;
+  if(!serial){ toast('Izaberi sertifikat za opoziv.', true); return; }
+  try{
+    const res = await api('POST', `/api/Revocation/revoke/${serial}`, { reason });
+    toast(res.message || 'Sertifikat opozvan.');
+    loadRegistry();
+  }catch(e){ toast('Greška pri opozivu: ' + e.message, true); }
+}
+
+async function generateCrl(){
+  try{
+    const res = await api('GET', '/api/Revocation/crl');
+    document.getElementById('crlMeta').innerHTML = `
+      <div class="k">Generisan</div><div class="v">${fmtDate(res.generatedAt)}</div>
+      <div class="k">Sledeći update</div><div class="v">${fmtDate(res.nextUpdate)}</div>
+    `;
+    document.getElementById('crlPem').textContent = res.crl;
+    toast('CRL generisan.');
+  }catch(e){ toast('Greška pri generisanju CRL-a: ' + e.message, true); }
+}
+
+/* ================= 5. VERIFY ================= */
+function renderVerifyResult(res){
+  const card = document.getElementById('verifyResultCard');
+  card.style.display = 'block';
+  const badge = document.getElementById('verifyBadge');
+  badge.textContent = res.isValid ? 'VALID' : 'INVALID';
+  badge.className = 'badge ' + (res.isValid ? 'active' : 'revoked');
+  document.getElementById('verifyKv').innerHTML = `
+    <div class="k">Serijski</div><div class="v">${res.serialNumber || '—'}</div>
+    <div class="k">Subject</div><div class="v">${res.subjectName || '—'}</div>
+    <div class="k">Issuer</div><div class="v">${res.issuerName || '—'}</div>
+    <div class="k">Status</div><div class="v">${res.status || '—'}</div>
+    <div class="k">Ističe</div><div class="v">${res.isExpired ? 'DA' : 'ne'}</div>
+    <div class="k">Opozvan</div><div class="v">${res.isRevoked ? 'DA — ' + (res.revocationReason||'') : 'ne'}</div>
+    <div class="k">Potpis</div><div class="v">${res.signatureValid ? 'validan' : 'nevalidan'}</div>
+    <div class="k">Lanac</div><div class="v">${res.chainValid ? 'validan' : 'nevalidan'}</div>
+  `;
+  const wrap = document.getElementById('verifyChainWrap');
+  wrap.innerHTML = (res.chainPath && res.chainPath.length)
+    ? '<ul class="chainpath">' + res.chainPath.map(p=>`<li>${p}</li>`).join('') + '</ul>'
+    : '';
+  const errs = document.getElementById('verifyErrors');
+  errs.innerHTML = (res.errors && res.errors.length) ? res.errors.map(e=>`<li>${e}</li>`).join('') : '';
+  card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function verifyBySerial(){
+  const s = document.getElementById('verSerialInput').value.trim();
+  if(!s){ toast('Unesi serijski broj.', true); return; }
+  try{ renderVerifyResult(await api('GET', `/api/Verification/verify/${s}`)); }
+  catch(e){ toast('Greška: ' + e.message, true); }
+}
+async function verifyByPem(){
+  const pem = document.getElementById('verPemInput').value.trim();
+  if(!pem){ toast('Unesi PEM sadržaj.', true); return; }
+  try{ renderVerifyResult(await api('POST', '/api/Verification/verify-pem', { pemCertificate: pem })); }
+  catch(e){ toast('Greška: ' + e.message, true); }
+}
+async function checkStatus(){
+  const s = document.getElementById('statSerialInput').value.trim();
+  if(!s){ toast('Unesi serijski broj.', true); return; }
+  try{
+    const res = await api('GET', `/api/Verification/status/${s}`);
+    document.getElementById('statResult').innerHTML = `
+      <div class="k">Status</div><div class="v">${res.status}</div>
+      <div class="k">Validan</div><div class="v">${res.isValid}</div>
+      <div class="k">Opozvan</div><div class="v">${res.isRevoked} ${res.revocationReason ? '('+res.revocationReason+')' : ''}</div>
+      <div class="k">Provereno</div><div class="v">${fmtDate(res.checkedAt)}</div>
+    `;
+  }catch(e){ toast('Greška: ' + e.message, true); }
+}
+
+/* ================= 6. STATISTICS ================= */
+async function loadStats(){
+  try{
+    const s = await api('GET', '/api/Statistics');
+    document.getElementById('statCards').innerHTML = `
+      <div class="stat"><div class="num">${s.totalCertificates}</div><div class="lbl">Ukupno sertifikata</div></div>
+      <div class="stat"><div class="num">${s.activeCertificates}</div><div class="lbl">Aktivnih</div></div>
+      <div class="stat"><div class="num">${s.revokedCertificates}</div><div class="lbl">Opozvanih</div></div>
+      <div class="stat"><div class="num">${s.expiredCertificates}</div><div class="lbl">Isteklih</div></div>
+      <div class="stat"><div class="num">${s.caCertificates}</div><div class="lbl">CA sertifikata</div></div>
+      <div class="stat"><div class="num">${s.endEntityCertificates}</div><div class="lbl">End-entity sertifikata</div></div>
+      <div class="stat"><div class="num">${Math.round(s.averageValidityDays||0)}</div><div class="lbl">Prosečna validnost (dana)</div></div>
+      <div class="stat"><div class="num" style="font-size:14px;">${s.lastIssuedAt ? fmtDate(s.lastIssuedAt) : '—'}</div><div class="lbl">Poslednje izdat</div></div>
+    `;
+    const reasons = s.revocationReasons || {};
+    const keys = Object.keys(reasons);
+    const max = Math.max(1, ...Object.values(reasons));
+    document.getElementById('revReasonBars').innerHTML = keys.length ? keys.map(k => `
+      <div class="barrow"><div class="lbl">${k}</div><div class="track"><div class="fill" style="width:${(reasons[k]/max*100)}%;"></div></div><div class="cnt">${reasons[k]}</div></div>
+    `).join('') : '<span style="color:var(--muted); font-size:12px;">Nema opozvanih sertifikata.</span>';
+
+    const monthly = s.issuedPerMonth || [];
+    const mmax = Math.max(1, ...monthly.map(m=>m.count));
+    document.getElementById('monthlyBars').innerHTML = monthly.length ? monthly.map(m => `
+      <div class="barrow"><div class="lbl">${m.month}</div><div class="track"><div class="fill" style="width:${(m.count/mmax*100)}%;"></div></div><div class="cnt">${m.count}</div></div>
+    `).join('') : '<span style="color:var(--muted); font-size:12px;">Nema podataka za poslednjih 12 meseci.</span>';
+  }catch(e){ toast('Greška pri učitavanju statistike: ' + e.message, true); }
+}
+
+async function loadExpiring(){
+  const days = parseInt(document.getElementById('expiringDays').value) || 30;
+  try{
+    const res = await api('GET', `/api/Statistics/expiring?withinDays=${days}`);
+    document.getElementById('expiringResult').innerHTML = res.count === 0
+      ? `Nema sertifikata koji ističu u narednih ${res.withinDays} dana.`
+      : `${res.count} sertifikat(a) ističe u narednih ${res.withinDays} dana:<br>` + res.serialNumbers.map(s=>shortSerial(s)).join('<br>');
+  }catch(e){ toast('Greška: ' + e.message, true); }
+}
+
+/* ================= 7. PERFORMANCE ================= */
+async function runBenchmark(){
+  const iter = parseInt(document.getElementById('benchIter').value) || 3;
+  try{
+    const res = await api('GET', `/api/Performance/benchmark/keygen?iterations=${iter}`);
+    document.getElementById('benchTbody').innerHTML = res.results.map((r,i) => `
+      <tr><td>${r.keySize} bita</td><td>${r.averageMs} ms</td><td>${r.minMs} ms</td><td>${r.maxMs} ms</td><td>${res.conclusion[i].securityLevel}</td></tr>
+    `).join('');
+    toast('Benchmark završen.');
+  }catch(e){ toast('Greška: ' + e.message, true); }
+}
+
+async function loadComparison(){
+  try{
+    const res = await api('GET', '/api/Performance/comparison');
+    const rows = [res.thisSystem, ...res.comparison];
+    const cols = ['name','keyStorage','revocationMechanism','certificateStandard','caHierarchy','keySizes','openSource','cloudReady','hsmSupport','scalability'];
+    const labels = ['Sistem','Skladištenje ključeva','Mehanizam opoziva','Standard sertifikata','CA hijerarhija','Veličine ključeva','Open Source','Cloud Ready','HSM podrška','Skalabilnost'];
+    let html = '<thead><tr>' + labels.map(l=>`<th>${l}</th>`).join('') + '</tr></thead><tbody>';
+    rows.forEach(r=>{
+      html += '<tr>' + cols.map(c => `<td>${typeof r[c] === 'boolean' ? (r[c]?'da':'ne') : r[c]}</td>`).join('') + '</tr>';
+    });
+    html += '</tbody>';
+    document.getElementById('compTable').innerHTML = html;
+  }catch(e){ toast('Greška: ' + e.message, true); }
+}
+
+/* ================= 8. AUDIT ================= */
+function renderAudit(list){
+  const tbody = document.getElementById('auditTbody');
+  if(!list || list.length === 0){ tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);">Nema zapisa.</td></tr>'; return; }
+  tbody.innerHTML = list.map(l => `
+    <tr>
+      <td>${fmtDate(l.timestamp)}</td>
+      <td>${l.action}</td>
+      <td>${l.success ? '<span class="badge active">OK</span>' : '<span class="badge revoked">FAIL</span>'}</td>
+      <td class="serial">${l.serialNumber ? shortSerial(l.serialNumber) : '—'}</td>
+      <td>${l.details || l.errorMessage || '—'}</td>
+      <td class="mono">${l.ipAddress || '—'}</td>
+    </tr>
+  `).join('');
+}
+async function loadAuditRecent(){
+  const limit = parseInt(document.getElementById('auditLimit').value) || 50;
+  try{ renderAudit(await api('GET', `/api/Audit?limit=${limit}`)); }
+  catch(e){ toast('Greška: ' + e.message, true); }
+}
+async function loadAuditFilter(){
+  const action = document.getElementById('auditAction').value;
+  const serial = document.getElementById('auditSerial').value.trim();
+  const params = new URLSearchParams();
+  if(serial) params.set('serialNumber', serial);
+  else if(action) params.set('action', action);
+  else { loadAuditRecent(); return; }
+  try{ renderAudit(await api('GET', `/api/Audit/filter?${params.toString()}`)); }
+  catch(e){ toast('Greška: ' + e.message, true); }
+}
+
+/* auto-connect attempt on load */
+window.addEventListener('load', connect);
+</script>
+</body>
+</html>
