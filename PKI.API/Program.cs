@@ -51,7 +51,6 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-app.UseHttpsRedirection();
 app.UseDefaultFiles();         // koren "/" sada traži wwwroot/index.html
 app.UseStaticFiles();          // servira wwwroot/index.html
 app.UseCors("FrontendPolicy"); // mora biti pre MapControllers
