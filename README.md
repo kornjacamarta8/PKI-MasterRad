@@ -109,7 +109,7 @@ Pri svakom sledećem pokretanju, CA se učitava iz baze — ključevi se ne rege
 
 ## Bezbednosne napomene
 
-- CA privatni ključevi su enkriptovani AES-256 pre čuvanja u bazi
+- CA privatni ključevi su enkriptovani AES-256-GCM (autentifikovana enkripcija) pre čuvanja u bazi
 - U produkcijskom okruženju enkripcioni ključ bi bio u Azure Key Vault ili HSM
 - EndEntity privatni ključevi se čuvaju u bazi — u produkciji bi se isporučivali 
   samo klijentu i ne bi se čuvali na serveru
@@ -133,7 +133,8 @@ PKI_MasterRad/
     │   ├── AuditLogRecord.cs
     │   ├── BulkCertificateRequest.cs
     │   ├── CaKeyRecord.cs
-    │   └── CertificateRecord.cs
+    │   ├── CertificateRecord.cs
+    │   └── CrlMetadataRecord.cs
     ├── Services/
     │   ├── AuditService.cs
     │   ├── CertificateAuthorityService.cs
