@@ -67,7 +67,7 @@ public class RevocationService
                 SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(
                     _caService.IntermediateCertificate.GetPublicKey())));
         crlGen.AddExtension(X509Extensions.CrlNumber, false,
-            new CrlNumber(BigInteger.One));
+            new CrlNumber(new BigInteger(GetNextCrlNumber().ToString())));
 
         var signer = new Asn1SignatureFactory("SHA256WithRSAEncryption",
             _caService.IntermediateKeyPair.Private, new SecureRandom());
@@ -78,6 +78,30 @@ public class RevocationService
         var writer = new PemWriter(sw);
         writer.WriteObject(crl);
         return sw.ToString();
+    }
+
+    /// <summary>
+    /// Atomski dobavlja i inkrementira perzistentan CRL broj (RFC 5280 CRL Number
+    /// ekstenzija) čuvan u kolekciji crl_metadata. FindOneAndUpdate sa Upsert=true
+    /// garantuje da je operacija atomska i da prvi poziv kreira zapis počev od 1,
+    /// umesto da svaki generisan CRL nosi istu, fiksnu vrednost.
+    /// </summary>
+    private long GetNextCrlNumber()
+    {
+        var filter = Builders<CrlMetadataRecord>.Filter.Eq(m => m.Scope, "IntermediateCA");
+        var update = Builders<CrlMetadataRecord>.Update
+            .Inc(m => m.LastCrlNumber, 1)
+            .Set(m => m.UpdatedAt, DateTime.UtcNow)
+            .SetOnInsert(m => m.Scope, "IntermediateCA");
+
+        var options = new FindOneAndUpdateOptions<CrlMetadataRecord>
+        {
+            IsUpsert = true,
+            ReturnDocument = ReturnDocument.After
+        };
+
+        var record = _mongo.CrlMetadata.FindOneAndUpdate(filter, update, options);
+        return record.LastCrlNumber;
     }
 
     private int GetReasonCode(string? reason) => reason switch

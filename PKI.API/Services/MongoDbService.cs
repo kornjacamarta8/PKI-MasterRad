@@ -23,4 +23,7 @@ public class MongoDbService
 
     public IMongoCollection<AuditLogRecord> AuditLogs =>
     _database.GetCollection<AuditLogRecord>("audit_logs");
+
+    public IMongoCollection<CrlMetadataRecord> CrlMetadata =>
+    _database.GetCollection<CrlMetadataRecord>("crl_metadata");
 }

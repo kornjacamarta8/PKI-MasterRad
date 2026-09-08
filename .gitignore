@@ -2,4 +2,5 @@
 **/obj/
 **/.vs/
 *.user
-appsettings.Development.json.DS_Store
+appsettings.Development.json
+.DS_Store
